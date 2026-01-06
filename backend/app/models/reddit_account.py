@@ -112,7 +112,8 @@ class RedditAccount(Base):
     # Relationships
     project: Mapped[Optional["Project"]] = relationship(
         "Project",
-        back_populates="reddit_accounts"
+        back_populates="reddit_accounts",
+        foreign_keys=[project_id]
     )
     generated_contents: Mapped[List["GeneratedContent"]] = relationship(
         "GeneratedContent",
