@@ -251,10 +251,10 @@ export default function ContentPage() {
                 </SelectTrigger>
                 <SelectContent>
                   {accounts
-                    ?.filter((a) => a.is_active && a.health_status === 'healthy')
+                    ?.filter((a) => a.status === 'active' && a.health_score >= 0.8)
                     .map((account) => (
                       <SelectItem key={account.id} value={account.id.toString()}>
-                        u/{account.username} ({account.karma_score} karma)
+                        u/{account.username} ({account.karma_total} karma)
                       </SelectItem>
                     ))}
                 </SelectContent>
