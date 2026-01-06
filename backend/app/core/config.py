@@ -107,7 +107,13 @@ class Settings(BaseSettings):
     ENCRYPTION_KEY: str = ""  # Fernet key for token encryption
 
     # CORS
-    ALLOWED_ORIGINS: List[str] = ["http://localhost:3000", "http://localhost:8000"]
+    ALLOWED_ORIGINS: List[str] = [
+        "http://localhost:3000",
+        "http://localhost:8000",
+        "https://content.adkuu.net",
+        "https://backoffice-adkuu.vercel.app",
+        "https://*.vercel.app",
+    ]
 
     # Tracking (optional)
     TRACKING_BASE_URL: Optional[str] = None
