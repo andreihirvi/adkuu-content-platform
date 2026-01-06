@@ -168,6 +168,38 @@ class ContentGenerator:
 
         return content, metadata
 
+    # Map of ISO 639-1 codes to language names for prompts
+    LANGUAGE_NAMES = {
+        "en": "English",
+        "et": "Estonian",
+        "de": "German",
+        "fr": "French",
+        "es": "Spanish",
+        "it": "Italian",
+        "pt": "Portuguese",
+        "nl": "Dutch",
+        "pl": "Polish",
+        "ru": "Russian",
+        "uk": "Ukrainian",
+        "ja": "Japanese",
+        "ko": "Korean",
+        "zh": "Chinese",
+        "ar": "Arabic",
+        "hi": "Hindi",
+        "sv": "Swedish",
+        "no": "Norwegian",
+        "da": "Danish",
+        "fi": "Finnish",
+        "lv": "Latvian",
+        "lt": "Lithuanian",
+    }
+
+    def _get_language_name(self, code: str) -> str:
+        """Get full language name from ISO code."""
+        if not code:
+            return "English"
+        return self.LANGUAGE_NAMES.get(code.lower(), code)
+
     def _build_system_prompt(
         self,
         project: Project,
@@ -176,6 +208,15 @@ class ContentGenerator:
     ) -> str:
         """Build system prompt for content generation."""
         style_info = self.STYLES.get(style, self.STYLES[ContentStyle.HELPFUL_EXPERT.value])
+
+        # Determine language instruction
+        language_name = self._get_language_name(project.language) if project.language else "English"
+        language_instruction = ""
+        if project.language and project.language.lower() != "en":
+            language_instruction = f"""
+LANGUAGE REQUIREMENT:
+You MUST write the entire comment in {language_name}. Do not use English unless it's a commonly used term in {language_name} Reddit communities.
+"""
 
         prompt = f"""You are a helpful Reddit user writing a comment on r/{subreddit}.
 
@@ -189,7 +230,7 @@ CRITICAL RULES:
 7. NO promotional links unless absolutely natural
 8. NO excessive punctuation or emoji
 9. Be specific and actionable, not vague
-
+{language_instruction}
 STYLE: {style_info['description']}
 TONE: {style_info['tone']}
 
@@ -201,8 +242,12 @@ TONE: {style_info['tone']}
         if project.product_context:
             prompt += f"PRODUCT/SERVICE CONTEXT (use naturally only if relevant):\n{project.product_context}\n\n"
 
-        prompt += """OUTPUT FORMAT:
-Write ONLY the Reddit comment. No meta-commentary, no "Here's a comment:", just the actual comment text."""
+        output_format = "Write ONLY the Reddit comment. No meta-commentary, no \"Here's a comment:\", just the actual comment text."
+        if project.language and project.language.lower() != "en":
+            output_format += f" Remember: write in {language_name}."
+
+        prompt += f"""OUTPUT FORMAT:
+{output_format}"""
 
         return prompt
 

@@ -9,7 +9,8 @@ from praw.exceptions import RedditAPIException
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
-from app.models import RedditAccount, AccountStatus, GeneratedContent, ContentStatus, Opportunity
+from app.models import RedditAccount, AccountStatus, GeneratedContent, ContentStatus, Opportunity, Project
+from app.models.project import PostingMode
 from app.utils.encryption import decrypt_token, encrypt_token
 from app.utils.text_processing import sanitize_for_reddit
 
@@ -182,17 +183,22 @@ class RedditPublisher:
         """
         Select the best account for posting to a subreddit.
 
-        Selection criteria:
-        1. Must be active and can_post
-        2. Prefer accounts with history in the subreddit
-        3. Prefer accounts with higher karma
-        4. Prefer accounts with lower removal rate
+        Respects project's posting_mode setting:
+        - 'specific': Use the preferred_account_id if set and available
+        - 'rotate': Round-robin through available accounts
+
+        Falls back to score-based selection if rotation not possible.
         """
+        # Get project settings
+        project = db.query(Project).get(project_id)
+        if not project:
+            return None
+
         # Get all active accounts for project
         accounts = db.query(RedditAccount).filter(
             RedditAccount.project_id == project_id,
             RedditAccount.status == AccountStatus.ACTIVE.value
-        ).all()
+        ).order_by(RedditAccount.id).all()
 
         if not accounts:
             return None
@@ -200,6 +206,48 @@ class RedditPublisher:
         # Filter to accounts that can post
         available = [a for a in accounts if a.can_post]
 
+        if not available:
+            return None
+
+        # Handle specific account mode
+        if project.posting_mode == PostingMode.SPECIFIC.value and project.preferred_account_id:
+            # Try to use the preferred account
+            preferred = next((a for a in available if a.id == project.preferred_account_id), None)
+            if preferred:
+                return preferred
+            # If preferred not available, log warning and fall through to rotation
+            logger.warning(f"Preferred account {project.preferred_account_id} not available for project {project_id}, using rotation")
+
+        # Handle rotation mode (or fallback from specific mode)
+        if len(available) == 1:
+            return available[0]
+
+        # Round-robin rotation
+        # Get the next account index
+        next_index = (project.last_used_account_index + 1) % len(available)
+
+        # Update the index for next time
+        project.last_used_account_index = next_index
+        db.flush()  # Update immediately but don't commit yet
+
+        selected = available[next_index]
+        logger.info(f"Rotation selected account {selected.username} (index {next_index}) for project {project_id}")
+
+        return selected
+
+    def _select_account_by_score(
+        self,
+        available: List[RedditAccount],
+        subreddit: str
+    ) -> Optional[RedditAccount]:
+        """
+        Select account based on scoring (legacy method for fallback).
+
+        Selection criteria:
+        1. Prefer accounts with history in the subreddit
+        2. Prefer accounts with higher karma
+        3. Prefer accounts with lower removal rate
+        """
         if not available:
             return None
 

@@ -2,7 +2,7 @@
 Pydantic schemas for Project endpoints.
 """
 from datetime import datetime
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, Literal
 from pydantic import BaseModel, Field, HttpUrl
 
 
@@ -17,6 +17,20 @@ class ProjectBase(BaseModel):
     keywords: List[str] = Field(default_factory=list)
     negative_keywords: List[str] = Field(default_factory=list)
     automation_level: int = Field(default=1, ge=1, le=4)
+    language: Optional[str] = Field(
+        None,
+        min_length=2,
+        max_length=10,
+        description="ISO 639-1 language code (e.g., 'en', 'et', 'de'). If set, only posts in this language will be mined and content will be generated in this language."
+    )
+    posting_mode: Literal["rotate", "specific"] = Field(
+        default="rotate",
+        description="'rotate' to use all accounts in rotation, 'specific' to use one account"
+    )
+    preferred_account_id: Optional[int] = Field(
+        None,
+        description="Account ID to use when posting_mode is 'specific'"
+    )
 
 
 class ProjectCreate(ProjectBase):
@@ -35,6 +49,9 @@ class ProjectUpdate(BaseModel):
     keywords: Optional[List[str]] = None
     negative_keywords: Optional[List[str]] = None
     automation_level: Optional[int] = Field(None, ge=1, le=4)
+    language: Optional[str] = Field(None, min_length=2, max_length=10)
+    posting_mode: Optional[Literal["rotate", "specific"]] = None
+    preferred_account_id: Optional[int] = None
     status: Optional[str] = None
     settings: Optional[Dict[str, Any]] = None
 

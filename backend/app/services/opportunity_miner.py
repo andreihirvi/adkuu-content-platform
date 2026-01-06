@@ -7,6 +7,13 @@ from typing import List, Optional, Dict, Any, Set
 import praw
 from sqlalchemy.orm import Session
 
+try:
+    from langdetect import detect, LangDetectException
+    LANGDETECT_AVAILABLE = True
+except ImportError:
+    LANGDETECT_AVAILABLE = False
+    LangDetectException = Exception
+
 from app.core.config import settings
 from app.models import Opportunity, OpportunityStatus, OpportunityUrgency, Project, SubredditConfig
 from app.services.virality_predictor import ViralityPredictor
@@ -40,6 +47,56 @@ class OpportunityMiner:
     def __init__(self):
         self.reddit = RedditClientFactory.create_read_only_client()
         self.virality_predictor = ViralityPredictor()
+
+    def _detect_language(self, text: str) -> Optional[str]:
+        """
+        Detect the language of text using langdetect.
+
+        Args:
+            text: Text to analyze
+
+        Returns:
+            ISO 639-1 language code or None if detection fails
+        """
+        if not LANGDETECT_AVAILABLE:
+            logger.warning("langdetect not available, skipping language detection")
+            return None
+
+        if not text or len(text.strip()) < 20:
+            # Not enough text for reliable detection
+            return None
+
+        try:
+            return detect(text)
+        except LangDetectException:
+            return None
+
+    def _matches_language(self, submission: praw.models.Submission, target_language: str) -> bool:
+        """
+        Check if a submission matches the target language.
+
+        Args:
+            submission: Reddit submission
+            target_language: ISO 639-1 language code to match
+
+        Returns:
+            True if matches (or no language filter), False otherwise
+        """
+        if not target_language:
+            return True
+
+        # Combine title and content for detection
+        text = submission.title
+        if submission.is_self and submission.selftext:
+            text = f"{text} {submission.selftext}"
+
+        detected = self._detect_language(text)
+
+        if detected is None:
+            # If we can't detect, include the post (fail open)
+            return True
+
+        return detected.lower() == target_language.lower()
 
     def mine_opportunities(
         self,
@@ -143,6 +200,10 @@ class OpportunityMiner:
                 # Skip old posts (> 24 hours)
                 age_hours = get_post_age_hours(submission)
                 if age_hours > 24:
+                    continue
+
+                # Language filter - skip posts not in target language
+                if project.language and not self._matches_language(submission, project.language):
                     continue
 
                 # Calculate scores

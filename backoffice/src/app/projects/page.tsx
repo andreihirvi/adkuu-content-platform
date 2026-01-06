@@ -33,20 +33,30 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { PageHeader, EmptyState } from '@/components/shared';
 import {
   useProjects,
   useCreateProject,
   useUpdateProject,
   useDeleteProject,
+  useRedditAccounts,
 } from '@/hooks/use-queries';
 import type { Project } from '@/types';
+import { SUPPORTED_LANGUAGES } from '@/types';
 
 // Import AlertDialog components separately since they weren't included in initial shadcn setup
 // Using Dialog as fallback for now
 
 export default function ProjectsPage() {
   const { data: projects, isLoading } = useProjects();
+  const { data: accounts } = useRedditAccounts();
   const createProject = useCreateProject();
   const updateProject = useUpdateProject();
   const deleteProject = useDeleteProject();
@@ -57,24 +67,32 @@ export default function ProjectsPage() {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
-    product_url: '',
+    website_url: '',
     keywords: '',
-    tone_guidelines: '',
+    negative_keywords: '',
+    brand_voice: '',
+    product_context: '',
     target_subreddits: '',
-    is_active: true,
-    daily_comment_limit: 10,
+    automation_level: 1,
+    language: '',  // Empty string means no language filter (all languages)
+    posting_mode: 'rotate' as 'rotate' | 'specific',
+    preferred_account_id: null as number | null,
   });
 
   const resetForm = () => {
     setFormData({
       name: '',
       description: '',
-      product_url: '',
+      website_url: '',
       keywords: '',
-      tone_guidelines: '',
+      negative_keywords: '',
+      brand_voice: '',
+      product_context: '',
       target_subreddits: '',
-      is_active: true,
-      daily_comment_limit: 10,
+      automation_level: 1,
+      language: '',
+      posting_mode: 'rotate',
+      preferred_account_id: null,
     });
   };
 
@@ -83,12 +101,16 @@ export default function ProjectsPage() {
       {
         name: formData.name,
         description: formData.description || null,
-        product_url: formData.product_url || null,
+        website_url: formData.website_url || null,
         keywords: formData.keywords.split(',').map((k) => k.trim()).filter(Boolean),
-        tone_guidelines: formData.tone_guidelines || null,
+        negative_keywords: formData.negative_keywords.split(',').map((k) => k.trim()).filter(Boolean),
+        brand_voice: formData.brand_voice || null,
+        product_context: formData.product_context || null,
         target_subreddits: formData.target_subreddits.split(',').map((s) => s.trim()).filter(Boolean),
-        is_active: formData.is_active,
-        daily_comment_limit: formData.daily_comment_limit,
+        automation_level: formData.automation_level,
+        language: formData.language || null,
+        posting_mode: formData.posting_mode,
+        preferred_account_id: formData.posting_mode === 'specific' ? formData.preferred_account_id : null,
       },
       {
         onSuccess: () => {
@@ -107,12 +129,16 @@ export default function ProjectsPage() {
         data: {
           name: formData.name,
           description: formData.description || null,
-          product_url: formData.product_url || null,
+          website_url: formData.website_url || null,
           keywords: formData.keywords.split(',').map((k) => k.trim()).filter(Boolean),
-          tone_guidelines: formData.tone_guidelines || null,
+          negative_keywords: formData.negative_keywords.split(',').map((k) => k.trim()).filter(Boolean),
+          brand_voice: formData.brand_voice || null,
+          product_context: formData.product_context || null,
           target_subreddits: formData.target_subreddits.split(',').map((s) => s.trim()).filter(Boolean),
-          is_active: formData.is_active,
-          daily_comment_limit: formData.daily_comment_limit,
+          automation_level: formData.automation_level,
+          language: formData.language || null,
+          posting_mode: formData.posting_mode,
+          preferred_account_id: formData.posting_mode === 'specific' ? formData.preferred_account_id : null,
         },
       },
       {
@@ -137,12 +163,16 @@ export default function ProjectsPage() {
     setFormData({
       name: project.name,
       description: project.description || '',
-      product_url: project.product_url || '',
+      website_url: project.website_url || '',
       keywords: project.keywords?.join(', ') || '',
-      tone_guidelines: project.tone_guidelines || '',
+      negative_keywords: project.negative_keywords?.join(', ') || '',
+      brand_voice: project.brand_voice || '',
+      product_context: project.product_context || '',
       target_subreddits: project.target_subreddits?.join(', ') || '',
-      is_active: project.is_active,
-      daily_comment_limit: project.daily_comment_limit,
+      automation_level: project.automation_level || 1,
+      language: project.language || '',
+      posting_mode: project.posting_mode || 'rotate',
+      preferred_account_id: project.preferred_account_id,
     });
     setEditingProject(project);
   };
@@ -185,98 +215,107 @@ export default function ProjectsPage() {
         />
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {projects.map((project) => (
-            <Card key={project.id}>
-              <CardHeader className="flex flex-row items-start justify-between space-y-0">
-                <div>
-                  <CardTitle className="flex items-center gap-2">
-                    {project.name}
-                    <Badge variant={project.is_active ? 'default' : 'secondary'}>
-                      {project.is_active ? 'Active' : 'Inactive'}
-                    </Badge>
-                  </CardTitle>
-                  <CardDescription className="mt-1">
-                    {project.description || 'No description'}
-                  </CardDescription>
-                </div>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon">
-                      <MoreVertical className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => startEditing(project)}>
-                      <Pencil className="mr-2 h-4 w-4" />
-                      Edit
-                    </DropdownMenuItem>
-                    <DropdownMenuItem>
-                      <Settings2 className="mr-2 h-4 w-4" />
-                      Subreddit Settings
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      className="text-destructive"
-                      onClick={() => setDeletingProject(project)}
-                    >
-                      <Trash2 className="mr-2 h-4 w-4" />
-                      Delete
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {project.target_subreddits?.length > 0 && (
-                    <div>
-                      <p className="text-sm font-medium mb-1">Target Subreddits</p>
-                      <div className="flex flex-wrap gap-1">
-                        {project.target_subreddits.slice(0, 5).map((sub) => (
-                          <Badge key={sub} variant="outline">
-                            r/{sub}
-                          </Badge>
-                        ))}
-                        {project.target_subreddits.length > 5 && (
-                          <Badge variant="outline">
-                            +{project.target_subreddits.length - 5} more
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                  {project.keywords?.length > 0 && (
-                    <div>
-                      <p className="text-sm font-medium mb-1">Keywords</p>
-                      <div className="flex flex-wrap gap-1">
-                        {project.keywords.slice(0, 3).map((kw) => (
-                          <Badge key={kw} variant="secondary">
-                            {kw}
-                          </Badge>
-                        ))}
-                        {project.keywords.length > 3 && (
-                          <Badge variant="secondary">
-                            +{project.keywords.length - 3} more
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                  <div className="flex items-center justify-between text-sm text-muted-foreground pt-2 border-t">
-                    <span>Daily limit: {project.daily_comment_limit}</span>
-                    {project.product_url && (
-                      <a
-                        href={project.product_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-primary hover:underline"
-                      >
-                        Visit site
-                      </a>
-                    )}
+          {projects.map((project) => {
+            const languageName = project.language
+              ? SUPPORTED_LANGUAGES.find(l => l.code === project.language)?.name || project.language
+              : null;
+            return (
+              <Card key={project.id}>
+                <CardHeader className="flex flex-row items-start justify-between space-y-0">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      {project.name}
+                      <Badge variant={project.status === 'active' ? 'default' : 'secondary'}>
+                        {project.status === 'active' ? 'Active' : project.status === 'paused' ? 'Paused' : 'Archived'}
+                      </Badge>
+                    </CardTitle>
+                    <CardDescription className="mt-1">
+                      {project.description || 'No description'}
+                    </CardDescription>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon">
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => startEditing(project)}>
+                        <Pencil className="mr-2 h-4 w-4" />
+                        Edit
+                      </DropdownMenuItem>
+                      <DropdownMenuItem>
+                        <Settings2 className="mr-2 h-4 w-4" />
+                        Subreddit Settings
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        className="text-destructive"
+                        onClick={() => setDeletingProject(project)}
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Delete
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {project.target_subreddits?.length > 0 && (
+                      <div>
+                        <p className="text-sm font-medium mb-1">Target Subreddits</p>
+                        <div className="flex flex-wrap gap-1">
+                          {project.target_subreddits.slice(0, 5).map((sub) => (
+                            <Badge key={sub} variant="outline">
+                              r/{sub}
+                            </Badge>
+                          ))}
+                          {project.target_subreddits.length > 5 && (
+                            <Badge variant="outline">
+                              +{project.target_subreddits.length - 5} more
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                    {project.keywords?.length > 0 && (
+                      <div>
+                        <p className="text-sm font-medium mb-1">Keywords</p>
+                        <div className="flex flex-wrap gap-1">
+                          {project.keywords.slice(0, 3).map((kw) => (
+                            <Badge key={kw} variant="secondary">
+                              {kw}
+                            </Badge>
+                          ))}
+                          {project.keywords.length > 3 && (
+                            <Badge variant="secondary">
+                              +{project.keywords.length - 3} more
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                    <div className="flex items-center justify-between text-sm text-muted-foreground pt-2 border-t">
+                      {languageName ? (
+                        <span>Language: {languageName}</span>
+                      ) : (
+                        <span>All languages</span>
+                      )}
+                      {project.website_url && (
+                        <a
+                          href={project.website_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-primary hover:underline"
+                        >
+                          Visit site
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       )}
 
@@ -297,7 +336,7 @@ export default function ProjectsPage() {
               {editingProject ? 'Edit Project' : 'Create New Project'}
             </DialogTitle>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
+          <div className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="name">Project Name *</Label>
@@ -309,11 +348,11 @@ export default function ProjectsPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="product_url">Product URL</Label>
+                <Label htmlFor="website_url">Website URL</Label>
                 <Input
-                  id="product_url"
-                  value={formData.product_url}
-                  onChange={(e) => setFormData({ ...formData, product_url: e.target.value })}
+                  id="website_url"
+                  value={formData.website_url}
+                  onChange={(e) => setFormData({ ...formData, website_url: e.target.value })}
                   placeholder="https://example.com"
                 />
               </div>
@@ -328,14 +367,25 @@ export default function ProjectsPage() {
                 rows={2}
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="keywords">Keywords (comma-separated)</Label>
-              <Input
-                id="keywords"
-                value={formData.keywords}
-                onChange={(e) => setFormData({ ...formData, keywords: e.target.value })}
-                placeholder="productivity, automation, saas"
-              />
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="keywords">Keywords (comma-separated)</Label>
+                <Input
+                  id="keywords"
+                  value={formData.keywords}
+                  onChange={(e) => setFormData({ ...formData, keywords: e.target.value })}
+                  placeholder="productivity, automation, saas"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="negative_keywords">Negative Keywords (comma-separated)</Label>
+                <Input
+                  id="negative_keywords"
+                  value={formData.negative_keywords}
+                  onChange={(e) => setFormData({ ...formData, negative_keywords: e.target.value })}
+                  placeholder="spam, scam, competitor"
+                />
+              </div>
             </div>
             <div className="space-y-2">
               <Label htmlFor="target_subreddits">Target Subreddits (comma-separated)</Label>
@@ -346,38 +396,128 @@ export default function ProjectsPage() {
                 placeholder="entrepreneur, startups, productivity"
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="tone_guidelines">Tone Guidelines</Label>
-              <Textarea
-                id="tone_guidelines"
-                value={formData.tone_guidelines}
-                onChange={(e) => setFormData({ ...formData, tone_guidelines: e.target.value })}
-                placeholder="Be helpful and authentic. Avoid direct promotion..."
-                rows={3}
-              />
-            </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="daily_limit">Daily Comment Limit</Label>
-                <Input
-                  id="daily_limit"
-                  type="number"
-                  min={1}
-                  max={100}
-                  value={formData.daily_comment_limit}
-                  onChange={(e) =>
-                    setFormData({ ...formData, daily_comment_limit: parseInt(e.target.value) || 10 })
-                  }
-                />
+                <Label htmlFor="language">Content Language</Label>
+                <Select
+                  value={formData.language}
+                  onValueChange={(value) => setFormData({ ...formData, language: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="All languages (no filter)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">All languages (no filter)</SelectItem>
+                    {SUPPORTED_LANGUAGES.map((lang) => (
+                      <SelectItem key={lang.code} value={lang.code}>
+                        {lang.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Only mine posts in this language and generate content in this language
+                </p>
               </div>
-              <div className="flex items-center space-x-2 pt-6">
-                <Switch
-                  id="is_active"
-                  checked={formData.is_active}
-                  onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
-                />
-                <Label htmlFor="is_active">Active</Label>
+              <div className="space-y-2">
+                <Label htmlFor="automation_level">Automation Level</Label>
+                <Select
+                  value={formData.automation_level.toString()}
+                  onValueChange={(value) => setFormData({ ...formData, automation_level: parseInt(value) })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="1">Manual - All content needs review</SelectItem>
+                    <SelectItem value="2">Assisted - High confidence queued</SelectItem>
+                    <SelectItem value="3">Semi-Auto - Safe content auto-approved</SelectItem>
+                    <SelectItem value="4">Full Auto - ML-driven publishing</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="brand_voice">Brand Voice Guidelines</Label>
+              <Textarea
+                id="brand_voice"
+                value={formData.brand_voice}
+                onChange={(e) => setFormData({ ...formData, brand_voice: e.target.value })}
+                placeholder="Be helpful and authentic. Avoid direct promotion..."
+                rows={2}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="product_context">Product Context</Label>
+              <Textarea
+                id="product_context"
+                value={formData.product_context}
+                onChange={(e) => setFormData({ ...formData, product_context: e.target.value })}
+                placeholder="What your product does, key features, unique selling points..."
+                rows={2}
+              />
+            </div>
+
+            {/* Account Selection */}
+            <div className="border-t pt-4 mt-4">
+              <h4 className="font-medium mb-3">Posting Account Settings</h4>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="posting_mode">Account Selection Mode</Label>
+                  <Select
+                    value={formData.posting_mode}
+                    onValueChange={(value: 'rotate' | 'specific') => {
+                      setFormData({
+                        ...formData,
+                        posting_mode: value,
+                        // Reset preferred account if switching to rotate
+                        preferred_account_id: value === 'rotate' ? null : formData.preferred_account_id
+                      });
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="rotate">Rotate All Accounts</SelectItem>
+                      <SelectItem value="specific">Use Specific Account</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    {formData.posting_mode === 'rotate'
+                      ? 'Posts will be distributed across all connected accounts'
+                      : 'All posts will be made from the selected account'}
+                  </p>
+                </div>
+                {formData.posting_mode === 'specific' && (
+                  <div className="space-y-2">
+                    <Label htmlFor="preferred_account">Select Account</Label>
+                    <Select
+                      value={formData.preferred_account_id?.toString() || ''}
+                      onValueChange={(value) => setFormData({
+                        ...formData,
+                        preferred_account_id: value ? parseInt(value) : null
+                      })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Choose an account" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {accounts?.filter(a => a.status === 'active').map((account) => (
+                          <SelectItem key={account.id} value={account.id.toString()}>
+                            u/{account.username} ({account.karma_total.toLocaleString()} karma)
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+              </div>
+              {!accounts?.length && (
+                <p className="text-sm text-muted-foreground mt-2">
+                  No Reddit accounts connected. Connect accounts in the Accounts page.
+                </p>
+              )}
             </div>
           </div>
           <DialogFooter>

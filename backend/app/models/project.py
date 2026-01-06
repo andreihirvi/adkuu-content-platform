@@ -3,7 +3,7 @@ Project model - represents a product/service to advertise.
 """
 from datetime import datetime
 from typing import List, Optional, TYPE_CHECKING
-from sqlalchemy import Column, Integer, String, Text, DateTime, JSON, Enum as SQLEnum
+from sqlalchemy import Column, Integer, String, Text, DateTime, JSON, Enum as SQLEnum, ForeignKey
 from sqlalchemy.orm import relationship, Mapped
 import enum
 
@@ -29,6 +29,12 @@ class AutomationLevel(int, enum.Enum):
     ASSISTED = 2       # High-confidence content queued, approval required
     SEMI_AUTO = 3      # Safe content auto-approved, risky needs review
     FULL_AUTO = 4      # ML-driven selection and publishing
+
+
+class PostingMode(str, enum.Enum):
+    """Mode for selecting Reddit account when publishing."""
+    ROTATE = "rotate"       # Rotate between all available accounts
+    SPECIFIC = "specific"   # Use a specific account only
 
 
 class Project(Base):
@@ -57,6 +63,26 @@ class Project(Base):
     target_subreddits: Mapped[List] = Column(JSON, default=list, nullable=False)
     keywords: Mapped[List] = Column(JSON, default=list, nullable=False)
     negative_keywords: Mapped[List] = Column(JSON, default=list, nullable=False)
+
+    # Language settings - ISO 639-1 code (e.g., 'en', 'et', 'de')
+    # If set, only opportunities in this language will be mined,
+    # and content will be generated in this language
+    language: Mapped[Optional[str]] = Column(String(10), nullable=True, index=True)
+
+    # Posting account settings
+    posting_mode: Mapped[str] = Column(
+        String(20),
+        default=PostingMode.ROTATE.value,
+        nullable=False
+    )
+    # If posting_mode is 'specific', use this account
+    preferred_account_id: Mapped[Optional[int]] = Column(
+        Integer,
+        ForeignKey("reddit_accounts.id", ondelete="SET NULL"),
+        nullable=True
+    )
+    # Track last used account index for round-robin rotation
+    last_used_account_index: Mapped[int] = Column(Integer, default=0, nullable=False)
 
     # Automation settings
     automation_level: Mapped[int] = Column(
@@ -98,7 +124,13 @@ class Project(Base):
     reddit_accounts: Mapped[List["RedditAccount"]] = relationship(
         "RedditAccount",
         back_populates="project",
-        cascade="all, delete-orphan"
+        cascade="all, delete-orphan",
+        foreign_keys="[RedditAccount.project_id]"
+    )
+    preferred_account: Mapped[Optional["RedditAccount"]] = relationship(
+        "RedditAccount",
+        foreign_keys=[preferred_account_id],
+        lazy="joined"
     )
     subreddit_configs: Mapped[List["SubredditConfig"]] = relationship(
         "SubredditConfig",

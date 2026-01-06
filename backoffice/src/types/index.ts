@@ -4,15 +4,42 @@ export interface Project {
   id: number;
   name: string;
   description: string | null;
-  product_url: string | null;
-  keywords: string[];
-  tone_guidelines: string | null;
+  brand_voice: string | null;
+  product_context: string | null;
+  website_url: string | null;
   target_subreddits: string[];
-  is_active: boolean;
-  daily_comment_limit: number;
+  keywords: string[];
+  negative_keywords: string[];
+  automation_level: 1 | 2 | 3 | 4;
+  language: string | null;  // ISO 639-1 language code (e.g., 'en', 'et', 'de')
+  posting_mode: 'rotate' | 'specific';  // 'rotate' for round-robin, 'specific' for one account
+  preferred_account_id: number | null;  // Account ID when posting_mode is 'specific'
+  status: 'active' | 'paused' | 'archived';
+  settings: Record<string, unknown>;
   created_at: string;
   updated_at: string;
 }
+
+// Supported languages for project language filter
+export const SUPPORTED_LANGUAGES = [
+  { code: 'en', name: 'English' },
+  { code: 'et', name: 'Estonian' },
+  { code: 'de', name: 'German' },
+  { code: 'fr', name: 'French' },
+  { code: 'es', name: 'Spanish' },
+  { code: 'it', name: 'Italian' },
+  { code: 'pt', name: 'Portuguese' },
+  { code: 'nl', name: 'Dutch' },
+  { code: 'pl', name: 'Polish' },
+  { code: 'ru', name: 'Russian' },
+  { code: 'uk', name: 'Ukrainian' },
+  { code: 'sv', name: 'Swedish' },
+  { code: 'no', name: 'Norwegian' },
+  { code: 'da', name: 'Danish' },
+  { code: 'fi', name: 'Finnish' },
+  { code: 'lv', name: 'Latvian' },
+  { code: 'lt', name: 'Lithuanian' },
+] as const;
 
 export interface RedditAccount {
   id: number;
