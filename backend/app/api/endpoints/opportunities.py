@@ -24,7 +24,7 @@ from app.services.quality_gates import QualityGates
 router = APIRouter()
 
 
-@router.get("/", response_model=OpportunityListResponse)
+@router.get("", response_model=OpportunityListResponse)
 async def list_opportunities(
     project_id: Optional[int] = None,
     status: Optional[str] = None,

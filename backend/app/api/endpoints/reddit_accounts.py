@@ -19,7 +19,7 @@ from app.services.reddit_publisher import RedditPublisher
 router = APIRouter()
 
 
-@router.get("/", response_model=RedditAccountListResponse)
+@router.get("", response_model=RedditAccountListResponse)
 async def list_accounts(
     project_id: Optional[int] = None,
     status: Optional[str] = None,

@@ -28,7 +28,7 @@ from app.services.reddit_publisher import RedditPublisher
 router = APIRouter()
 
 
-@router.get("/", response_model=ContentListResponse)
+@router.get("", response_model=ContentListResponse)
 async def list_content(
     project_id: Optional[int] = None,
     opportunity_id: Optional[int] = None,

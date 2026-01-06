@@ -22,7 +22,7 @@ from app.services.subreddit_analyzer import SubredditAnalyzer
 router = APIRouter()
 
 
-@router.post("/", response_model=ProjectResponse, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=ProjectResponse, status_code=status.HTTP_201_CREATED)
 async def create_project(
     project_in: ProjectCreate,
     db: Session = Depends(get_db),
@@ -57,7 +57,7 @@ async def create_project(
     return project
 
 
-@router.get("/", response_model=ProjectListResponse)
+@router.get("", response_model=ProjectListResponse)
 async def list_projects(
     skip: int = Query(0, ge=0),
     limit: int = Query(20, ge=1, le=100),

@@ -136,7 +136,7 @@ async def update_current_user(
 
 
 # Admin-only endpoints
-@router.get("/", response_model=UsersListResponse)
+@router.get("", response_model=UsersListResponse)
 async def list_users(
     skip: int = 0,
     limit: int = 50,
@@ -162,7 +162,7 @@ async def list_users(
     )
 
 
-@router.post("/", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 async def create_user(
     user_data: UserCreate,
     admin: User = Depends(require_admin),
