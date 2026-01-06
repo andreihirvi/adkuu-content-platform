@@ -77,19 +77,29 @@ async def oauth_callback(
 ):
     """
     Handle Reddit OAuth callback.
+    Redirects to frontend with success/error status.
 
     Args:
         code: Authorization code from Reddit
         state: State token for verification
         error: Error message if authorization failed
     """
-    # Check for errors
+    frontend_url = settings.FRONTEND_URL
+    redirect_path = "/accounts"
+
+    # Check for errors from Reddit
     if error:
-        raise HTTPException(status_code=400, detail=f"OAuth error: {error}")
+        return RedirectResponse(
+            url=f"{frontend_url}{redirect_path}?oauth_error={error}",
+            status_code=302
+        )
 
     # Verify state
     if state not in _oauth_states:
-        raise HTTPException(status_code=400, detail="Invalid state token")
+        return RedirectResponse(
+            url=f"{frontend_url}{redirect_path}?oauth_error=invalid_state",
+            status_code=302
+        )
 
     state_data = _oauth_states.pop(state)
     project_id = state_data.get("project_id")
@@ -128,10 +138,9 @@ async def oauth_callback(
 
             db.commit()
 
-            return OAuthCallbackResponse(
-                success=True,
-                account_id=existing.id,
-                username=existing.username,
+            return RedirectResponse(
+                url=f"{frontend_url}{redirect_path}?oauth_success=true&account_id={existing.id}&username={existing.username}",
+                status_code=302
             )
 
         else:
@@ -159,16 +168,17 @@ async def oauth_callback(
             db.commit()
             db.refresh(account)
 
-            return OAuthCallbackResponse(
-                success=True,
-                account_id=account.id,
-                username=account.username,
+            return RedirectResponse(
+                url=f"{frontend_url}{redirect_path}?oauth_success=true&account_id={account.id}&username={account.username}",
+                status_code=302
             )
 
     except Exception as e:
-        return OAuthCallbackResponse(
-            success=False,
-            error=f"OAuth failed: {str(e)}"
+        import urllib.parse
+        error_msg = urllib.parse.quote(str(e))
+        return RedirectResponse(
+            url=f"{frontend_url}{redirect_path}?oauth_error={error_msg}",
+            status_code=302
         )
 
 

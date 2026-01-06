@@ -91,6 +91,9 @@ class Settings(BaseSettings):
     REDDIT_REDIRECT_URI: str = "http://localhost:8000/api/v1/reddit/auth/callback"
     REDDIT_USER_AGENT: str = "reddit-content-platform:v1.0.0"
 
+    # Frontend URL (for OAuth redirects)
+    FRONTEND_URL: str = "http://localhost:3000"
+
     # LLM APIs
     OPENAI_API_KEY: str = ""
     ANTHROPIC_API_KEY: str = ""
