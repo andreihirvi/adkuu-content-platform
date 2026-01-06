@@ -39,11 +39,19 @@ import {
 import type { RedditAccount } from '@/types';
 import { cn } from '@/lib/utils';
 
-const healthConfig: Record<RedditAccount['health_status'], { label: string; color: string; icon: typeof Shield }> = {
-  healthy: { label: 'Healthy', color: 'text-green-600', icon: Shield },
-  warning: { label: 'Warning', color: 'text-yellow-600', icon: AlertTriangle },
-  suspended: { label: 'Suspended', color: 'text-red-600', icon: AlertTriangle },
-  unknown: { label: 'Unknown', color: 'text-muted-foreground', icon: Activity },
+const getHealthStatus = (score: number): { label: string; color: string; icon: typeof Shield } => {
+  if (score >= 0.8) return { label: 'Healthy', color: 'text-green-600', icon: Shield };
+  if (score >= 0.5) return { label: 'Warning', color: 'text-yellow-600', icon: AlertTriangle };
+  if (score > 0) return { label: 'At Risk', color: 'text-red-600', icon: AlertTriangle };
+  return { label: 'Unknown', color: 'text-muted-foreground', icon: Activity };
+};
+
+const statusConfig: Record<RedditAccount['status'], { label: string; variant: 'default' | 'secondary' | 'destructive' }> = {
+  active: { label: 'Active', variant: 'default' },
+  inactive: { label: 'Inactive', variant: 'secondary' },
+  rate_limited: { label: 'Rate Limited', variant: 'destructive' },
+  oauth_expired: { label: 'OAuth Expired', variant: 'destructive' },
+  suspended: { label: 'Suspended', variant: 'destructive' },
 };
 
 export default function AccountsPage() {
@@ -121,9 +129,9 @@ export default function AccountsPage() {
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {accounts.map((account) => {
-            const health = healthConfig[account.health_status];
+            const health = getHealthStatus(account.health_score);
             const HealthIcon = health.icon;
-            const isInCooldown = account.cooldown_until && new Date(account.cooldown_until) > new Date();
+            const accountStatus = statusConfig[account.status];
 
             return (
               <Card key={account.id}>
@@ -131,8 +139,8 @@ export default function AccountsPage() {
                   <div>
                     <CardTitle className="flex items-center gap-2">
                       u/{account.username}
-                      <Badge variant={account.is_active ? 'default' : 'secondary'}>
-                        {account.is_active ? 'Active' : 'Inactive'}
+                      <Badge variant={accountStatus.variant}>
+                        {accountStatus.label}
                       </Badge>
                     </CardTitle>
                     <CardDescription className="flex items-center gap-1 mt-1">
@@ -167,7 +175,7 @@ export default function AccountsPage() {
                       <div>
                         <p className="text-sm text-muted-foreground">Karma</p>
                         <p className="text-lg font-semibold">
-                          {account.karma_score?.toLocaleString() || 'N/A'}
+                          {account.karma_total?.toLocaleString() || 'N/A'}
                         </p>
                       </div>
                       <div>
@@ -182,26 +190,23 @@ export default function AccountsPage() {
 
                     <div className="space-y-2 pt-2 border-t">
                       <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">Comments Today</span>
-                        <span className="font-medium">{account.daily_comment_count}</span>
+                        <span className="text-muted-foreground">Actions Today</span>
+                        <span className="font-medium">{account.daily_actions_count}</span>
                       </div>
-                      {account.last_used_at && (
+                      {account.last_action_at && (
                         <div className="flex items-center justify-between text-sm">
                           <span className="text-muted-foreground">Last Used</span>
                           <span className="font-medium">
-                            {formatDistanceToNow(new Date(account.last_used_at), { addSuffix: true })}
+                            {formatDistanceToNow(new Date(account.last_action_at), { addSuffix: true })}
                           </span>
                         </div>
                       )}
                     </div>
 
-                    {isInCooldown && (
+                    {account.status === 'rate_limited' && (
                       <div className="flex items-center gap-2 p-2 rounded-lg bg-yellow-500/10 text-yellow-700">
                         <Clock className="h-4 w-4" />
-                        <span className="text-sm">
-                          Cooldown until{' '}
-                          {format(new Date(account.cooldown_until!), 'MMM d, h:mm a')}
-                        </span>
+                        <span className="text-sm">Rate limited - wait before posting</span>
                       </div>
                     )}
                   </div>

@@ -17,13 +17,20 @@ export interface Project {
 export interface RedditAccount {
   id: number;
   username: string;
-  is_active: boolean;
-  karma_score: number | null;
+  display_name: string;
+  project_id: number | null;
+  status: 'active' | 'inactive' | 'rate_limited' | 'oauth_expired' | 'suspended';
+  health_score: number;
+  karma_total: number;
+  karma_comment: number;
+  karma_post: number;
   account_age_days: number | null;
-  last_used_at: string | null;
-  cooldown_until: string | null;
-  health_status: 'healthy' | 'warning' | 'suspended' | 'unknown';
-  daily_comment_count: number;
+  daily_actions_count: number;
+  last_action_at: string | null;
+  last_health_check_at: string | null;
+  total_posts_made: number;
+  total_posts_removed: number;
+  removal_rate: number;
   created_at: string;
   updated_at: string;
 }
