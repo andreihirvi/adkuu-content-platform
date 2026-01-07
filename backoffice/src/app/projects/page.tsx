@@ -73,7 +73,7 @@ export default function ProjectsPage() {
     brand_voice: '',
     product_context: '',
     target_subreddits: '',
-    automation_level: 1,
+    automation_level: 1 as 1 | 2 | 3 | 4,
     language: '',  // Empty string means no language filter (all languages)
     posting_mode: 'rotate' as 'rotate' | 'specific',
     preferred_account_id: null as number | null,
@@ -89,9 +89,9 @@ export default function ProjectsPage() {
       brand_voice: '',
       product_context: '',
       target_subreddits: '',
-      automation_level: 1,
+      automation_level: 1 as 1 | 2 | 3 | 4,
       language: '',
-      posting_mode: 'rotate',
+      posting_mode: 'rotate' as 'rotate' | 'specific',
       preferred_account_id: null,
     });
   };
@@ -423,7 +423,7 @@ export default function ProjectsPage() {
                 <Label htmlFor="automation_level">Automation Level</Label>
                 <Select
                   value={formData.automation_level.toString()}
-                  onValueChange={(value) => setFormData({ ...formData, automation_level: parseInt(value) })}
+                  onValueChange={(value) => setFormData({ ...formData, automation_level: parseInt(value) as 1 | 2 | 3 | 4 })}
                 >
                   <SelectTrigger>
                     <SelectValue />
