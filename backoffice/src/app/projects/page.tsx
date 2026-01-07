@@ -400,14 +400,14 @@ export default function ProjectsPage() {
               <div className="space-y-2">
                 <Label htmlFor="language">Content Language</Label>
                 <Select
-                  value={formData.language}
-                  onValueChange={(value) => setFormData({ ...formData, language: value })}
+                  value={formData.language || 'all'}
+                  onValueChange={(value) => setFormData({ ...formData, language: value === 'all' ? '' : value })}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="All languages (no filter)" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All languages (no filter)</SelectItem>
+                    <SelectItem value="all">All languages (no filter)</SelectItem>
                     {SUPPORTED_LANGUAGES.map((lang) => (
                       <SelectItem key={lang.code} value={lang.code}>
                         {lang.name}
