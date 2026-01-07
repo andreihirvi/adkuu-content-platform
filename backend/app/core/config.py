@@ -99,12 +99,10 @@ class Settings(BaseSettings):
     ANTHROPIC_API_KEY: str = ""
 
     # Default LLM settings
-    DEFAULT_LLM_MODEL: str = "gpt-5.2"  # Best for complex, high-quality content
-    DEFAULT_LLM_MODEL_FAST: str = "gpt-5-mini"  # For simpler tasks and fallback
+    DEFAULT_LLM_MODEL: str = "gpt-4o"  # Best for complex, high-quality content
+    DEFAULT_LLM_MODEL_FAST: str = "gpt-4o-mini"  # For simpler tasks and fallback
     DEFAULT_LLM_TEMPERATURE: float = 0.8  # Slightly higher for more natural variation
     DEFAULT_LLM_MAX_TOKENS: int = 800  # Concise is better for Reddit
-    DEFAULT_LLM_REASONING_EFFORT: str = "low"  # Balance quality and speed
-    DEFAULT_LLM_VERBOSITY: str = "low"  # Reddit prefers concise
 
     # Security
     SECRET_KEY: str = "change_this_to_a_secure_secret_key"

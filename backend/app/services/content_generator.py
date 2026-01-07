@@ -227,39 +227,25 @@ class ContentGenerator:
         system_prompt: str,
         user_prompt: str
     ) -> Tuple[str, Dict[str, Any]]:
-        """Generate content using GPT-5.2 Responses API."""
+        """Generate content using OpenAI Chat Completions API."""
 
-        # Use the new Responses API for GPT-5.2
-        response = self.openai_client.responses.create(
+        response = self.openai_client.chat.completions.create(
             model=settings.DEFAULT_LLM_MODEL,
-            input=[
-                {"role": "developer", "content": system_prompt},
+            messages=[
+                {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt}
             ],
-            reasoning={
-                "effort": settings.DEFAULT_LLM_REASONING_EFFORT
-            },
-            text={
-                "verbosity": settings.DEFAULT_LLM_VERBOSITY
-            },
-            max_output_tokens=settings.DEFAULT_LLM_MAX_TOKENS,
+            temperature=settings.DEFAULT_LLM_TEMPERATURE,
+            max_tokens=settings.DEFAULT_LLM_MAX_TOKENS,
         )
 
-        # Extract content from response
-        content = ""
-        for item in response.output:
-            if item.type == "message":
-                for content_block in item.content:
-                    if content_block.type == "output_text":
-                        content = content_block.text
-                        break
+        content = response.choices[0].message.content
 
         metadata = {
             "model": settings.DEFAULT_LLM_MODEL,
             "provider": "openai",
-            "reasoning_effort": settings.DEFAULT_LLM_REASONING_EFFORT,
-            "input_tokens": response.usage.input_tokens if response.usage else 0,
-            "output_tokens": response.usage.output_tokens if response.usage else 0,
+            "prompt_tokens": response.usage.prompt_tokens if response.usage else 0,
+            "completion_tokens": response.usage.completion_tokens if response.usage else 0,
         }
 
         return content, metadata
